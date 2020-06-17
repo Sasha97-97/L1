@@ -8,11 +8,28 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Globalization;
 
 namespace L1
 {
     public partial class Form1 : Form
     {
+        // честно стырено из evladich2002/ComputerGraphicsLaba
+        static private CultureInfo _fileCulture = CultureInfo.GetCultureInfo("ru-RU");
+        static private NumberStyles _numberStyles = NumberStyles.Float | NumberStyles.AllowThousands;
+        
+        // честно стырено из evladich2002/ComputerGraphicsLaba
+                static private bool TryParseDouble(string str, out double val)
+        {
+            return double.TryParse(str, _numberStyles, _fileCulture, out val);
+        }
+        // честно стырено из evladich2002/ComputerGraphicsLaba
+                static private double ParseDouble(string str)
+        {
+            return double.Parse(str, _fileCulture);
+        }
+
+
         class Point
         {
             public double x, y, z, h; // координаты точки
@@ -24,10 +41,10 @@ namespace L1
                 string[] s = str.Split(' '); // создаём массив строк, в каждой строке одна координата точки
 
                 // каждое поле точки содежит координату типа double
-                point.x = double.Parse(s[0]);
-                point.y = double.Parse(s[1]);
-                point.z = double.Parse(s[2]);
-                point.h = double.Parse(s[3]);
+                point.x = ParseDouble(s[0]);
+                point.y = ParseDouble(s[1]);
+                point.z = ParseDouble(s[2]);
+                point.h = ParseDouble(s[3]);
 
                 return point; // возвращаем объект класса "Точка"
             }
@@ -53,13 +70,16 @@ namespace L1
         }
 
 
-        List<Point> points=new List<Point>(); // создаём список точек
-        List<Join> joines =new List<Join>(); // создаём список соединений
+        List<Point> points = new List<Point>(); // создаём список точек
+        List<Join> joines = new List<Join>(); // создаём список соединений
 
         // чтение данных из файла
         void filereader() {
-            string path = "C:\\Users\\Саша\\Documents\\Visual Studio 2010\\Projects\\L1\\L1\\myscene.txt"; // кладем путь файла в переменную path
+            string path = "..\\..\\myscene.txt"; // кладем путь файла в переменную path
             var data = File.ReadAllLines(path); // в data попадает массив строк
+
+            points.Clear();
+            joines.Clear();
 
             // читаем точки 
             foreach (string str in data) {
@@ -77,8 +97,10 @@ namespace L1
 
         // функция вписывания сцены в picturebox
         void enter() {
-            double maxx = points[0].x, maxy = points[0].y;
-            double minx = points[0].x, miny = points[0].y;
+            double maxx = points[0].x;
+            double maxy = points[0].y;
+            double minx = points[0].x;
+            double miny = points[0].y;
             double km; // коэффициент масштабирования
 
             // находим точки с максимальными абсциссами и ординатами
@@ -88,21 +110,22 @@ namespace L1
 
                 if (points[i].x < minx) minx = points[i].x;
                 if (points[i].y < miny) miny = points[i].y;
-
-                // ищем коэффициент масштабирования
-                if (pictureBox1.Height / (maxy - miny) < pictureBox1.Width / (maxx - minx))
-                    km = pictureBox1.Height / (maxy - miny);
-                else km = pictureBox1.Width / (maxx - minx);
-
-                // смещаем, масштабируем
-                for (int j = 0; j < points.Count; j++) {
-                    points[j].x = points[j].x - minx;
-                    points[j].y = points[j].y - miny;
-
-                    points[j].x = points[j].x * km;
-                    points[j].y = points[j].y * km;
-                }
             }
+            // ищем коэффициент масштабирования
+            if (pictureBox1.Height / (maxy - miny) < pictureBox1.Width / (maxx - minx))
+                km = pictureBox1.Height / (maxy - miny);
+            else km = pictureBox1.Width / (maxx - minx);
+
+            // смещаем, масштабируем
+            for (int j = 0; j < points.Count; j++) {
+                points[j].x -= minx;
+                points[j].y -= miny;
+
+                points[j].x *= km;
+                points[j].y *= km;
+                points[j].z *= km;
+            }
+
         }
 
         void draw() {
@@ -128,23 +151,23 @@ namespace L1
         // Параллельный перенос
         void transfer(double a, double b, double c) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].x = a + points[i].x * points[i].h;
-                points[i].y = b + points[i].y * points[i].h;
-                points[i].z = c + points[i].z * points[i].h;
+                points[i].x += a * points[i].h;
+                points[i].y += b * points[i].h;
+                points[i].z += c * points[i].h;
             }
         }
 
         // Масштабирование по X
         void scaleX(double kx) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x * kx;
+                points[i].x *= kx;
             }
         }
 
         // Масштабирование по Y
         void scaleY(double ky) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].y = points[i].y * ky;
+                points[i].y *= ky;
             }
         }
 
@@ -152,60 +175,81 @@ namespace L1
         void scaleZ(double kz) {
             for (int i = 0; i < points.Count; i++)
             {
-                points[i].z = points[i].z * kz;
+                points[i].z *= kz;
             }
         }
 
         // Поворот вокруг оси X
         void rotateX(double a) {
-            for (int i=0; i < points.Count; i++) {
-                points[i].y = points[i].y * Math.Cos(a) - points[i].z * Math.Sin(a);
-                points[i].z = points[i].y * Math.Sin(a) + points[i].z * Math.Cos(a);
+            // честно стырено из Shagivaleeva190005/KG
+            for (int i = 0; i < points.Count; i++)//перебираем точки 
+            {
+                // координаты новой точки у
+                double newY = points[i].y * Math.Cos(a * Math.PI / 180) - points[i].z * Math.Sin(a * Math.PI / 180);
+                // координаты новой точки z
+                double newZ = points[i].y * Math.Sin(a * Math.PI / 180) + points[i].z * Math.Cos(a * Math.PI / 180);
+                //новые координаты у и z
+                points[i].y = newY;
+                points[i].z = newZ;
             }
         }
 
         // Поворот вокруг Y
         void rotateY(double a) {
-            for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x * Math.Cos(a) + points[i].z * Math.Sin(a);
-                points[i].y = points[i].y + points[i].z;
-                points[i].z = -points[i].x * Math.Sin(a) + points[i].z * Math.Cos(a);
+            // честно стырено из Shagivaleeva190005/KG
+            for (int i = 0; i < points.Count; i++)//перебираем точки
+            {
+                // координаты новой точки x
+                double newX = points[i].x * Math.Cos(a * Math.PI / 180) + points[i].z * Math.Sin(a * Math.PI / 180);
+                // координаты новой точки z
+                double newZ = -points[i].x * Math.Sin(a * Math.PI / 180) + points[i].z * Math.Cos(a * Math.PI / 180);
+                //новые координаты х и z
+                points[i].x = newX;
+                points[i].z = newZ;
             }
+
         }
 
         // Поворот вокруг Z
         void rotateZ(double a) {
-            for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x * Math.Cos(a) - points[i].y * Math.Sin(a);
-                points[i].y = points[i].x * Math.Sin(a) + points[i].y * Math.Cos(a);
+            // честно стырено из Shagivaleeva190005/KG
+            for (int i = 0; i < points.Count; i++)//перебираем точки                
+            {
+                // координаты новой точки у
+                double newY = points[i].x * Math.Sin(a * Math.PI / 180) + points[i].y * Math.Cos(a * Math.PI / 180);
+                // координаты новой точки x
+                double newX = points[i].x * Math.Cos(a * Math.PI / 180) - points[i].y * Math.Sin(a * Math.PI / 180);
+                //новые координаты у и х
+                points[i].y = newY;
+                points[i].x = newX;
             }
         }
 
         // Косой сдвиг оси X по оси Y
         void shiftXY(double k) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x + points[i].y * k;
+                points[i].x += points[i].y * k;
             }
         }
 
         // Косой сдвиг оси X по оси Z
         void shiftXZ(double k) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x + points[i].z * k;
+                points[i].x += points[i].z * k;
             }
         }
 
         // Косой сдвиг оси Y по оси X
         void shiftYX(double k) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].y = points[i].x * k + points[i].y;
+                points[i].y += points[i].y;
             }
         }
 
         // Косой сдвиг оси Y по оси Z
         void shiftYZ(double k) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].y = points[i].y + points[i].z * k;
+                points[i].y += points[i].z * k;
             }
         }
 
@@ -213,35 +257,35 @@ namespace L1
         void shiftZX(double k)
         {
             for (int i = 0; i < points.Count; i++) {
-                points[i].z = points[i].z + points[i].x * k;
+                points[i].z += points[i].x * k;
             }
         }
 
         // Косой сдвиг оси Z по оси Y
         void shiftZY(double k) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].z = points[i].z + points[i].y * k;
+                points[i].z += points[i].y * k;
             }
         }
 
         // OПП по оси X с фокусным расстоянием fx
         void OPPfx(double fx) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].h = points[i].x / fx + points[i].h;
+                points[i].h += points[i].x / fx;
             }
         }
 
         // OПП по оси Y с фокусным расстоянием fy
         void OPPfy(double fy) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].h = points[i].y / fy + points[i].h;
+                points[i].h += points[i].y / fy;
             }
         }
 
         // OПП по оси Z с фокусным расстоянием fz
         void OPPfz(double fz) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].h = points[i].z / fz + points[i].h;
+                points[i].h += points[i].z / fz;
             }
         }
 
@@ -262,128 +306,267 @@ namespace L1
         // Параллельно переносим
         private void button2_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox1.Text);
-            double b = Double.Parse(textBox2.Text);
-            double c = Double.Parse(textBox3.Text);
-            transfer(a, b, c);
-            draw();
+            double a;
+            double b;
+            double c;
+
+            if (TryParseDouble(textBox1.Text, out a) &&
+                TryParseDouble(textBox2.Text, out b) &&
+                TryParseDouble(textBox3.Text, out c))
+            {
+                transfer(a, b, c);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
+
         }
 
         // Масштабируем по X
         private void button3_Click(object sender, EventArgs e)
         {
-            double kx = Double.Parse(textBox4.Text);
-            scaleX(kx);
-            draw();
+            double kx;
+
+            if (TryParseDouble(textBox4.Text, out kx))
+            {
+                scaleX(kx);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Масштабируем по Y
         private void button4_Click(object sender, EventArgs e)
         {
-            double ky = Double.Parse(textBox5.Text);
-            scaleX(ky);
-            draw();
+            double ky;
+
+            if (TryParseDouble(textBox5.Text, out ky))
+            {
+                scaleY(ky);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Масштабируем по Z
         private void button5_Click(object sender, EventArgs e)
         {
-            double kz = Double.Parse(textBox6.Text);
-            scaleX(kz);
-            draw();
+            double kz;
+
+            if (TryParseDouble(textBox6.Text, out kz))
+            {
+                scaleZ(kz);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Поворачиваем вокруг оси X
         private void button6_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox7.Text);
-            rotateX(a);
-            draw();
+            double a;
+
+            if (TryParseDouble(textBox7.Text, out a))
+            {
+                rotateX(a);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
+        
         // Поворачиваем вокруг осе Y
         private void button7_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox7.Text);
-            rotateY(a);
-            draw();
+            double a;
+
+            if (TryParseDouble(textBox7.Text, out a))
+            {
+                rotateY(a);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Поворачиваем вокруг осе Z
         private void button8_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox7.Text);
-            rotateZ(a);
-            draw();
+            double a;
+
+            if (TryParseDouble(textBox7.Text, out a))
+            {
+                rotateZ(a);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Сдвигаем X по Y
         private void button9_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftXY(k);
-            draw();
+            double k;
+
+            if (TryParseDouble(textBox8.Text, out k))
+            {
+                shiftXY(k);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Сдвигаем X по Z
         private void button10_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftXZ(k);
-            draw();
+            double k;
+
+            if (TryParseDouble(textBox8.Text, out k))
+            {
+                shiftXZ(k);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Сдвигаем Y по X
         private void button11_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftYX(k);
-            draw();
+            double k;
+
+            if (TryParseDouble(textBox8.Text, out k))
+            {
+                shiftYX(k);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
+        
         // Сдвигаем Y по Z
         private void button12_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftYZ(k);
-            draw();
+            double k;
+
+            if (TryParseDouble(textBox8.Text, out k))
+            {
+                shiftYZ(k);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Сдвигаем Z по X
         private void button13_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftZX(k);
-            draw();
+            double k;
+
+            if (TryParseDouble(textBox8.Text, out k))
+            {
+                shiftZX(k);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // Сдвигаем Z по X
         private void button14_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftZY(k);
-            draw();
+            double k;
+
+            if (TryParseDouble(textBox8.Text, out k))
+            {
+                shiftZY(k);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // ОПП с fx
         private void button15_Click(object sender, EventArgs e)
         {
-            double fx = Double.Parse(textBox9.Text);
-            OPPfx(fx);
-            draw();
+            double fx;
+
+            if (TryParseDouble(textBox9.Text, out fx))
+            {
+                OPPfx(fx);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // ОПП с fy
         private void button16_Click(object sender, EventArgs e)
         {
-            double fy = Double.Parse(textBox10.Text);
-            OPPfx(fy);
-            draw();
+            double fy;
+
+            if (TryParseDouble(textBox10.Text, out fy))
+            {
+                OPPfy(fy);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
         }
 
         // ОПП с fz
         private void button17_Click(object sender, EventArgs e)
         {
-            double fz = Double.Parse(textBox11.Text);
-            OPPfx(fz);
+            double fz;
+
+            if (TryParseDouble(textBox11.Text, out fz))
+            {
+                OPPfz(fz);
+                draw();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка!");
+            }
+        }
+
+        private void button18_Click(object sender, EventArgs e)
+        {
+            enter();
             draw();
         }
     }
