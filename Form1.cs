@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -58,8 +59,12 @@ namespace L1
 
         // чтение данных из файла
         void filereader() {
-            string path = "C:\\Users\\Саша\\Documents\\Visual Studio 2010\\Projects\\L1\\L1\\myscene.txt"; // кладем путь файла в переменную path
+            string path = "..\\..\\myscene.txt";
+            //string path = "C:\\Users\\Саша\\Documents\\Visual Studio 2010\\Projects\\L1\\L1\\myscene.txt"; // кладем путь файла в переменную path
             var data = File.ReadAllLines(path); // в data попадает массив строк
+
+            points.Clear();
+            points.Clear();
 
             // читаем точки 
             foreach (string str in data) {
@@ -75,39 +80,46 @@ namespace L1
             }
         }
 
+        
         // функция вписывания сцены в picturebox
-        void enter() {
+        void enter()
+        {
             double maxx = points[0].x, maxy = points[0].y;
             double minx = points[0].x, miny = points[0].y;
             double km; // коэффициент масштабирования
 
             // находим точки с максимальными абсциссами и ординатами
-            for (int i = 0; i < points.Count; i++) {
+            for (int i = 0; i < points.Count; i++)
+            {
                 if (points[i].x > maxx) maxx = points[i].x;
                 if (points[i].y > maxy) maxy = points[i].y;
-
                 if (points[i].x < minx) minx = points[i].x;
                 if (points[i].y < miny) miny = points[i].y;
-
+            }
                 // ищем коэффициент масштабирования
                 if (pictureBox1.Height / (maxy - miny) < pictureBox1.Width / (maxx - minx))
                     km = pictureBox1.Height / (maxy - miny);
                 else km = pictureBox1.Width / (maxx - minx);
 
                 // смещаем, масштабируем
-                for (int j = 0; j < points.Count; j++) {
+                for (int j = 0; j < points.Count; j++)
+                {
                     points[j].x = points[j].x - minx;
                     points[j].y = points[j].y - miny;
 
                     points[j].x = points[j].x * km;
                     points[j].y = points[j].y * km;
+                    points[j].z = points[j].z * km;
                 }
-            }
+            
         }
 
-        void draw() {
+
+        void draw()
+        {
             // от однородных к декартовым
-            for (int i = 0; i < points.Count; i++) {
+            for (int i = 0; i < points.Count; i++)
+            {
                 points[i].x = points[i].x / points[i].h;
                 points[i].y = points[i].y / points[i].h;
                 points[i].z = points[i].z / points[i].h;
@@ -115,16 +127,14 @@ namespace L1
             }
             pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height);
             Graphics g = Graphics.FromImage(pictureBox1.Image);
-
-            //Graphics g = pictureBox1.CreateGraphics(); // объявили объект класса Graphics, рисуем на picturebox
             g.Clear(Color.White);
             Pen pen = new Pen(Color.Black, 2); // создаём объект класса Pen
-            for (int i = 0; i < joines.Count; i++) {
-                g.DrawLine(pen, (float)points[joines[i].one-1].x, (float)points[joines[i].one-1].y,
-                    (float)points[joines[i].two-1].x, (float)points[joines[i].two-1].y);
+            for (int i = 0; i < joines.Count; i++)
+            {
+                g.DrawLine(pen, (float)points[joines[i].one - 1].x, (float)points[joines[i].one - 1].y,
+                    (float)points[joines[i].two - 1].x, (float)points[joines[i].two - 1].y);
             }
         }
-
         // Параллельный перенос
         void transfer(double a, double b, double c) {
             for (int i = 0; i < points.Count; i++) {
@@ -159,25 +169,35 @@ namespace L1
         // Поворот вокруг оси X
         void rotateX(double a) {
             for (int i=0; i < points.Count; i++) {
-                points[i].y = points[i].y * Math.Cos(a) - points[i].z * Math.Sin(a);
-                points[i].z = points[i].y * Math.Sin(a) + points[i].z * Math.Cos(a);
+                double al = points[i].y * Math.Cos(a*Math.PI/180) - points[i].z * Math.Sin(a*Math.PI/180);
+                double be = points[i].y * Math.Sin(a*Math.PI/180) + points[i].z * Math.Cos(a*Math.PI/180);
+
+                points[i].y = al;
+                points[i].z = be;
             }
         }
 
         // Поворот вокруг Y
         void rotateY(double a) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x * Math.Cos(a) + points[i].z * Math.Sin(a);
-                points[i].y = points[i].y + points[i].z;
-                points[i].z = -points[i].x * Math.Sin(a) + points[i].z * Math.Cos(a);
+                double al = points[i].x * Math.Cos(a*Math.PI/180) + points[i].z * Math.Sin(a*Math.PI/180);
+                double be = points[i].y + points[i].z;
+                double ga = -points[i].x * Math.Sin(a*Math.PI/180) + points[i].z * Math.Cos(a*Math.PI/180);
+
+                points[i].x = al;
+                points[i].y = be;
+                points[i].z = ga;
             }
         }
 
         // Поворот вокруг Z
         void rotateZ(double a) {
             for (int i = 0; i < points.Count; i++) {
-                points[i].x = points[i].x * Math.Cos(a) - points[i].y * Math.Sin(a);
-                points[i].y = points[i].x * Math.Sin(a) + points[i].y * Math.Cos(a);
+                double al = points[i].x * Math.Cos(a*Math.PI/180) - points[i].y * Math.Sin(a*Math.PI/180);
+                double be = points[i].x * Math.Sin(a*Math.PI/180) + points[i].y * Math.Cos(a*Math.PI/180);
+
+                points[i].x = al;
+                points[i].y = be;
             }
         }
 
@@ -251,6 +271,7 @@ namespace L1
             BackColor = Color.Orange; 
         }
 
+        // КНОПКИ
         // Загрузка сцены
         private void button1_Click(object sender, EventArgs e)
         {
@@ -259,132 +280,203 @@ namespace L1
             draw();
         }
 
+        // Вписать
+        private void button18_Click(object sender, EventArgs e)
+        {
+            enter();
+        }
+
         // Параллельно переносим
         private void button2_Click(object sender, EventArgs e)
-        {
-            double a = Double.Parse(textBox1.Text);
-            double b = Double.Parse(textBox2.Text);
-            double c = Double.Parse(textBox3.Text);
-            transfer(a, b, c);
-            draw();
+        {   
+            double a, b, c;
+            if (Double.TryParse(textBox1.Text, out a) && Double.TryParse(textBox1.Text, out b) && Double.TryParse(textBox1.Text, out c))
+            {
+                transfer(a, b, c);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести числа!");
         }
 
         // Масштабируем по X
         private void button3_Click(object sender, EventArgs e)
         {
-            double kx = Double.Parse(textBox4.Text);
-            scaleX(kx);
-            draw();
+            double kx;
+            if (Double.TryParse(textBox4.Text, out kx))
+            {
+                scaleX(kx);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Масштабируем по Y
         private void button4_Click(object sender, EventArgs e)
         {
-            double ky = Double.Parse(textBox5.Text);
-            scaleX(ky);
+            double ky;
+            if (Double.TryParse(textBox5.Text, out ky))
+            {
+            scaleY(ky);
             draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Масштабируем по Z
         private void button5_Click(object sender, EventArgs e)
         {
-            double kz = Double.Parse(textBox6.Text);
-            scaleX(kz);
-            draw();
+            double kz;
+            if (Double.TryParse(textBox5.Text, out kz))
+            {
+                scaleZ(kz);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Поворачиваем вокруг оси X
         private void button6_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox7.Text);
-            rotateX(a);
-            draw();
+            double a;
+            if (Double.TryParse(textBox7.Text, out a))
+            {
+                rotateX(a);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
         // Поворачиваем вокруг осе Y
         private void button7_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox7.Text);
-            rotateY(a);
-            draw();
+            double a;
+            if (Double.TryParse(textBox7.Text, out a))
+            {
+                rotateY(a);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Поворачиваем вокруг осе Z
         private void button8_Click(object sender, EventArgs e)
         {
-            double a = Double.Parse(textBox7.Text);
-            rotateZ(a);
-            draw();
+            double a;
+            if (Double.TryParse(textBox7.Text, out a))
+            {
+                rotateZ(a);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Сдвигаем X по Y
         private void button9_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftXY(k);
-            draw();
+            double k;
+            if (Double.TryParse(textBox7.Text, out k))
+            {
+                shiftXY(k);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Сдвигаем X по Z
         private void button10_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftXZ(k);
-            draw();
+            double k;
+            if (Double.TryParse(textBox8.Text, out k))
+            {
+                shiftXZ(k);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Сдвигаем Y по X
         private void button11_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftYX(k);
-            draw();
+            double k;
+            if (Double.TryParse(textBox8.Text, out k))
+            {
+                shiftYX(k);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
+
         // Сдвигаем Y по Z
         private void button12_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
+            double k;
+            if (Double.TryParse(textBox8.Text, out k))
+            {
             shiftYZ(k);
             draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Сдвигаем Z по X
         private void button13_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftZX(k);
-            draw();
+            double k;
+            if (Double.TryParse(textBox8.Text, out k))
+            {
+                shiftZX(k);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // Сдвигаем Z по X
         private void button14_Click(object sender, EventArgs e)
         {
-            double k = Double.Parse(textBox8.Text);
-            shiftZY(k);
-            draw();
+            double k;
+            if (Double.TryParse(textBox8.Text, out k))
+            {
+                shiftZY(k);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // ОПП с fx
         private void button15_Click(object sender, EventArgs e)
         {
-            double fx = Double.Parse(textBox9.Text);
-            OPPfx(fx);
-            draw();
+            double fx;
+            if (Double.TryParse(textBox9.Text, out fx))
+            {
+                OPPfx(fx);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // ОПП с fy
         private void button16_Click(object sender, EventArgs e)
         {
-            double fy = Double.Parse(textBox10.Text);
+            double fy;
+
+            if (Double.TryParse(textBox10.Text, out fy))
+            {
             OPPfx(fy);
             draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
 
         // ОПП с fz
         private void button17_Click(object sender, EventArgs e)
         {
-            double fz = Double.Parse(textBox11.Text);
-            OPPfx(fz);
-            draw();
+            double fz;
+            if (Double.TryParse(textBox11.Text, out fz))
+            {
+                OPPfx(fz);
+                draw();
+            }
+            else MessageBox.Show("Необходимо ввести число!");
         }
+
     }
 }
